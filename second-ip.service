@@ -1,0 +1,12 @@
+[Unit]
+Description=Second IP
+
+[Service]
+User=root
+ExecStart=/usr/bin/second-ip --new-ip 192.168.0.100
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+
