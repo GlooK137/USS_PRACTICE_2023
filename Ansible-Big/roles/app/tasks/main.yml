@@ -1,0 +1,32 @@
+- name: Install nginx and psql
+  apt:                                                 
+    name: '{{ item }}'
+    state: present
+  loop:
+    - nginx
+    - postgresql-client
+
+- name: Get repo sudoku
+  git:
+    repo: 'https://github.com/Nktech-Official/Sudoku-Web-Game-flask'
+    dest: /home/node/sudoku
+
+- name: Create venv
+  shell: 'python3 -m venv /home/node/env'
+
+- name: Install requirements
+  pip:
+    requirements: /home/node/sudoku/requirements.txt
+    virtualenv: /home/node/env
+
+- name: Run flask
+  shell: 'cd /home/node/sudoku; ../env/bin/flask run --host=127.0.0.1 > log.txt 2>&1 &'
+
+- name: Config nginx
+  copy:
+    src: sudoku.conf
+    dest: /etc/nginx/nginx.conf
+- name: Restart nginx
+  systemd:
+    state: restarted
+    name: nginx

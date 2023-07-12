@@ -1,0 +1,5 @@
+[app]
+master
+
+[db]
+worker1

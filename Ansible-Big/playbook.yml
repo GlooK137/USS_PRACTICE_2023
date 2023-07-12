@@ -1,0 +1,49 @@
+- name: prepare APP
+  hosts: app
+  roles: 
+    - app
+  pre_tasks:
+    - name: "Install Python packages"
+      apt: 
+        name: '{{ item }}'
+        state: present
+      loop:
+        - python3-psycopg2
+        - python3-venv
+
+
+- name: prepare DB PostgreSQL
+  hosts: db
+  become: yes
+  roles: 
+    - db
+  pre_tasks:
+    - name: "Install packages"
+      apt: 
+        name: postgresql
+        state: present
+
+    - name: "Install Python packages"
+      apt: 
+        name: python3-psycopg2  
+        state: present
+
+  post_tasks:
+    - name: restart postgres
+      service: 
+        name: postgresql 
+        state: restarted
+
+- name: Request DB with psql
+  hosts: app
+  become: true
+  tasks:
+    - postgresql_query:
+        db: '{{ db_name }}'
+        login_user: '{{ db_user }}'
+        login_password: '{{ db_password }}'
+        query: 'SELECT * FROM test;'
+        login_host: 'worker1'
+      register: output
+    - debug:
+        var: output

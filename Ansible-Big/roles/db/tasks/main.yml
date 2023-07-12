@@ -1,0 +1,74 @@
+- name: Check init postgres
+  stat:
+    path: "/var/lib/pgsql/data/pg_hba.conf"
+  register: postgres_data
+
+- name: Start and enable services
+  service: 
+    name: '{{ item }}' 
+    state: started 
+    enabled: yes
+  loop:
+    - postgresql
+
+- name: Create database
+  postgresql_db:
+    state: present
+    name: "{{ db_name }}"
+  become: yes
+  become_user: postgres
+
+- name: Create db user
+  postgresql_user:
+    state: present
+    name: "{{ db_user }}"
+    password: "{{ db_password }}"
+  become: yes
+  become_user: postgres
+
+- name: Grant db user access to app db
+  postgresql_privs:
+    type: database
+    database: "{{ db_name }}"
+    roles: "{{ db_user }}"
+    grant_option: no
+    privs: all
+  become: yes
+  become_user: postgres
+
+- name: Create test table
+  postgresql_table:
+    db: '{{ db_name }}'
+    name: test
+    owner: '{{ db_user }}'
+    columns:
+      - id bigserial primary key
+      - num bigint
+      - stories text
+  become: true
+  become_user: postgres
+
+- name: Replace postgresql configuration file to allow remote connection
+  lineinfile:
+    path: "/etc/postgresql/14/main/postgresql.conf"
+    line: '{{ item }}'
+    owner: postgres
+    group: postgres
+    mode: '0644'
+  with_items:
+    - "listen_addresses = '*'"
+    - "port = 5432"
+  become: yes
+  become_user: root
+    
+- name: "Allow md5 connection for the db user"
+  postgresql_pg_hba:
+    dest: "/etc/postgresql/14/main/pg_hba.conf"
+    contype: host
+    databases: all
+    source: "192.168.0.1/24"
+    method: md5
+    users: all
+    create: true
+  become: yes
+  become_user: postgres
